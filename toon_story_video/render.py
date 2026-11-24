@@ -24,7 +24,7 @@ ap.add_argument("--still", action="store_true")
 ap.add_argument("--at", type=float, default=0.5, help="position of the still within the shot")
 ap.add_argument("--only", default="")
 ap.add_argument("--scale", type=float, default=1.0)
-ap.add_argument("--samples", type=int, default=12)
+ap.add_argument("--samples", type=int, default=5)
 ap.add_argument("--threads", type=int, default=0)
 ap.add_argument("--part", default="0/1")
 a = ap.parse_args()
@@ -43,6 +43,7 @@ for idx, sh in enumerate(timing["shots"]):
     if a.threads:
         s.render.threads_mode = "FIXED"
         s.render.threads = a.threads
+    toonkit.SHOT.update(frames=n, seed=idx * 100)
     getattr(shots, "shot_" + sid)(n)
     s.frame_start, s.frame_end = 1, n
     if a.still:

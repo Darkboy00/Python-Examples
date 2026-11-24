@@ -8,12 +8,12 @@ narrator, word-by-word captions and a generated backing track.
 
 | File | Role |
 |---|---|
-| `story_chess.py` | The script: one `(shot_id, narration, pause)` entry per shot |
+| `story_chess.py` | The script: one `(shot_id, narration, pause)` entry per shot, plus sound-effect cues |
 | `shots_chess.py` | One `shot_<id>(n)` function per shot that builds and animates the scene |
-| `toonkit.py` | Reusable Blender helpers: materials, outlines, characters, text, lights, camera |
+| `toonkit.py` | Reusable Blender helpers: materials, outlines, characters (blink, walk, talk), text, handwriting reveal, lights, camera |
 | `narrate.py` | Narration audio (Kokoro TTS) plus shot lengths and caption timings |
 | `render.py` | Renders the shots with Cycles on CPU (resumable, `--still` for previews) |
-| `assemble.py` | Joins frames, burns captions, mixes narration and music with ffmpeg |
+| `assemble.py` | Joins frames, burns animated captions, mixes narration, generated music and sound effects with ffmpeg |
 
 ## Requirements
 
@@ -27,7 +27,7 @@ and Carlito fonts, and the Kokoro model files `kokoro-v1.0.onnx` and
 B=build
 python narrate.py story_chess $B kokoro-v1.0.onnx voices-v1.0.bin
 python render.py shots_chess $B --still --scale 0.5      # quick preview stills
-python render.py shots_chess $B --scale 0.75 --samples 8 # full render (~3 s/frame on 4 cores)
+python render.py shots_chess $B                          # full render (~4.5 s/frame on 4 cores)
 python assemble.py $B chess.mp4 --mood-shift poster --mood-back study_wide
 ```
 

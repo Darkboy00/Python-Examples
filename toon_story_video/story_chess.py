@@ -34,3 +34,28 @@ SHOTS = [
     ("last_dollar", "And on the empty trophy stand, he left one dollar.", 0.3),
     ("last_note",   "Good game. Play me again.", 1.0),
 ]
+
+# Sound effects: shot_id -> [(position in shot 0..1, effect name), ...]
+SFX = {
+    "king_falls": [(0.25, "thud")],
+    "pay_dollar": [(0.25, "slide")],
+    "bill_note": [(0.5, "scribble"), (0.7, "scribble")],
+    "notice": [(0.0, "whoosh")],
+    "kid": [(0.1, "pop")],
+    "granny": [(0.1, "pop")],
+    "queue": [(0.0, "whoosh")],
+    "board_100": [(0.08, "ding")],
+    "board_200": [(0.08, "ding")],
+    "board_300": [(0.08, "ding")],
+    "poster": [(0.0, "boom")],
+    "trophy": [(0.25, "shine"), (0.5, "shine"), (0.75, "shine")],
+    "signup": [(0.15, "scribble")],
+    "round_one": [(0.5, "thud")],
+    "shock": [(0.15, "thud")],
+    "tally": [(0.28, "ding"), (0.48, "ding"), (0.68, "ding"), (0.88, "ding")],
+    "study_wide": [(0.0, "whoosh")],
+    "notebook": [(0.06, "scribble"), (0.23, "scribble"), (0.4, "scribble"), (0.57, "scribble"), (0.74, "scribble")],
+    "shelves": [(0.0, "whoosh")],
+    "last_dollar": [(0.0, "boom")],
+    "last_note": [(0.02, "scribble"), (0.2, "scribble"), (0.5, "ding")],
+}

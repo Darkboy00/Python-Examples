@@ -42,7 +42,8 @@ Format: Layer, Start, End, Style, Text
 """
 for sh in T["shots"]:
     for c in sh["captions"]:
-        ass += f"Dialogue: 0,{ts(c['start'])},{ts(c['end'])},cap,{c['text']}\n"
+        pop = r"{\fscx72\fscy72\t(0,90,\fscx100\fscy100)}"  # each chunk pops in
+        ass += f"Dialogue: 0,{ts(c['start'])},{ts(c['end'])},cap,{pop}{c['text']}\n"
 open(os.path.join(a.build, "captions.ass"), "w").write(ass)
 
 
@@ -92,6 +93,70 @@ def music(sr=44100, bpm=104):
 m, sr = music()
 sf.write(os.path.join(a.build, "music.wav"), m, sr)
 
+
+# -------------------------------------------------------- sound effects
+def band(x, sr, lo, hi):
+    f = np.fft.rfft(x)
+    fr = np.fft.rfftfreq(len(x), 1 / sr)
+    f[(fr < lo) | (fr > hi)] = 0
+    return np.fft.irfft(f, len(x))
+
+
+def effect(name, sr, rnd):
+    def t(d):
+        return np.arange(int(d * sr)) / sr
+    if name == "whoosh":
+        k = t(0.38)
+        return 0.5 * band(rnd.standard_normal(len(k)), sr, 300, 3200) * np.sin(np.pi * k / 0.38) ** 2
+    if name == "slide":
+        k = t(0.3)
+        return 0.3 * band(rnd.standard_normal(len(k)), sr, 900, 4500) * np.sin(np.pi * k / 0.3) ** 2
+    if name == "thud":
+        k = t(0.3)
+        w = np.sin(2 * np.pi * (50 * k + 20 * (1 - np.exp(-k * 30)) / 30 * 2)) * np.exp(-k * 14)
+        click = band(rnd.standard_normal(len(k)), sr, 800, 5000) * np.exp(-k * 90) * 0.5
+        return 0.9 * (w + click)
+    if name == "boom":
+        k = t(1.0)
+        return 0.9 * (np.sin(2 * np.pi * 52 * k) * np.exp(-k * 4)
+                      + 0.3 * band(rnd.standard_normal(len(k)), sr, 40, 300) * np.exp(-k * 6))
+    if name == "ding":
+        k = t(0.8)
+        return 0.4 * (np.sin(2 * np.pi * 1568 * k) + 0.4 * np.sin(2 * np.pi * 3136 * k)
+                      + 0.15 * np.sin(2 * np.pi * 4704 * k)) * np.exp(-k * 6)
+    if name == "pop":
+        k = t(0.09)
+        return 0.6 * np.sin(2 * np.pi * (400 * k + 2800 * k * k)) * np.sin(np.pi * k / 0.09)
+    if name == "shine":
+        k = t(0.5)
+        out = np.zeros(len(k))
+        for i, fq in enumerate((2093, 2637, 3136)):
+            d = int(i * 0.05 * sr)
+            kk = k[:len(k) - d]
+            out[d:] += 0.22 * np.sin(2 * np.pi * fq * kk) * np.exp(-kk * 9)
+        return out
+    if name == "scribble":
+        k = t(0.6)
+        env = np.abs(np.sin(2 * np.pi * 8 * k + rnd.uniform(0, 3))) ** 2 * np.sin(np.pi * k / 0.6)
+        return 0.22 * band(rnd.standard_normal(len(k)), sr, 2500, 8000) * env
+    raise ValueError(name)
+
+
+def sfx_track(sr=44100):
+    rnd = np.random.default_rng(1)
+    out = np.zeros(int(total * sr) + sr, dtype=np.float32)
+    for when, name in T.get("sfx", []):
+        w = effect(name, sr, rnd).astype(np.float32)
+        w[:40] *= np.linspace(0, 1, 40)
+        w[-200:] *= np.linspace(1, 0, 200)
+        i = int(when * sr)
+        out[i:i + len(w)] += w[:len(out) - i]
+    return out[:int(total * sr)], sr
+
+
+fx, sr = sfx_track()
+sf.write(os.path.join(a.build, "sfx.wav"), fx, sr)
+
 # ---------------------------------------------------------------- video
 lst = os.path.join(a.build, "frames.txt")
 frames = sorted(glob.glob(os.path.join(a.build, "frames", "*", "*.png")))
@@ -102,9 +167,11 @@ with open(lst, "w") as f:
 subprocess.run([
     "ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-r", str(FPS), "-i", lst,
     "-i", os.path.join(a.build, "narration.wav"), "-i", os.path.join(a.build, "music.wav"),
+    "-i", os.path.join(a.build, "sfx.wav"),
     "-filter_complex",
     f"[0:v]scale=720:1280:flags=lanczos,ass={os.path.join(a.build, 'captions.ass')},format=yuv420p[v];"
-    "[1:a]volume=1.6[n];[2:a]volume=0.16[m];[n][m]amix=inputs=2:normalize=0,alimiter=limit=0.95[a]",
+    "[1:a]volume=1.6[n];[2:a]volume=0.15[m];[3:a]volume=0.5[x];"
+    "[n][m][x]amix=inputs=3:normalize=0,alimiter=limit=0.95[a]",
     "-map", "[v]", "-map", "[a]", "-r", str(FPS), "-c:v", "libx264", "-crf", "18", "-preset", "medium",
     "-c:a", "aac", "-b:a", "160k", "-t", f"{total:.3f}", "-movflags", "+faststart", a.out,
 ], check=True)
